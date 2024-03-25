@@ -1,6 +1,8 @@
 #ifndef HTML_H
 #define HTML_H
 
+#include <memory>
+
 #include <QString>
 #include <QDebug>
 
@@ -37,78 +39,95 @@ struct Block
 	QString ToStr() { return "blockDefining [" + blockDefining + "]\nblockText [" + blockText + "]\nblockFinal [" + blockFinal + "]\n"; }
 };
 
-struct Teg
+namespace TagNames {
+
+	const QString html {"html"};
+	const QString head {"head"};
+	const QString body {"body"};
+	const QString title {"title"};
+	const QString pre {"pre"};
+	const QString h1 {"h1"};
+	const QString h2 {"h2"};
+	const QString h3 {"h3"};
+	const QString h4 {"h4"};
+	const QString h5 {"h5"};
+	const QString h6 {"h6"};
+	const QString b {"b"};
+	const QString i {"i"};
+	const QString tt {"tt"};
+	const QString a {"a"};
+	const QString blockquote {"blockquote"};
+	const QString dl {"dl"};
+	const QString ol {"ol"};
+	const QString ul {"ul"};
+	const QString div {"div"};
+	const QString table {"table"};
+	const QString tr {"tr"};
+	const QString td {"td"};
+	const QString th {"th"};
+	const QString frameset {"frameset"};
+	const QString noframes {"noframes"};
+	const QString form {"form"};
+	const QString select  {"select "};
+	const QString textarea {"textarea "};
+	const QString span {"span"};
+	const QString path {"path"};
+	const QString svg {"svg"};
+
+	const QString p {"p"};
+	const QString br {"br"};
+	const QString dt {"dt"};
+	const QString dd {"dd"};
+	const QString li {"li"};
+	const QString img {"img "};
+	const QString hr {"hr"};
+	const QString option {"option"};
+	const QString input {"input"};
+
+	const QStringList needClose { html,head,body,title,pre,h1,h2,h3,h4,h5,h6,b,i,tt,
+				a,blockquote,dl,ol,ul,div,table,tr,td,th,frameset,noframes,form,
+				select,textarea,span,path,svg };
+	const QStringList notNeedClose { p,br,dt,dd,li,img,hr,option,input };
+	const QStringList all = needClose + notNeedClose;
+};
+
+struct Tag
 {
 	const QString &html;
 	int startIndex;
 	int endIndex;
+	Tag *closerTag = nullptr;
+	Tag *openerTag = nullptr;
+	std::vector<Tag*> nestedOpenersTags;
 
 	int type = undefined;
 	QString name;
 	std::vector<Attribute> attributes;
 
-	Teg(const QString &html_, int startIndex_, int endIndex_): html{html_}, startIndex{startIndex_}, endIndex {endIndex_} {}
+	Tag(const QString &html_, int startIndex_, int endIndex_): html{html_}, startIndex{startIndex_}, endIndex {endIndex_} { DecodeTag(); }
 
-	void DecodeTeg();
+	void DecodeTag();
 
-	QString GetText() const { return html.mid(startIndex+1,endIndex-startIndex-1);}
-	QString IndexesAndSrcTextToStr() const
-	{
-		return "["+QSn(startIndex)+"-"+QSn(endIndex)+"]:["+GetText()+"]";
-	}
-	QString DecodedToStr()
-	{
-		QString ret;
-		ret = "["+TypeToStr()+"]["+name+"]";
-		if(attributes.size()) ret += "\n    Attributes:";
-		for(uint i=0; i<attributes.size(); i++)
-		{
-			ret += attributes[i].ToStr();
-		}
-		return ret;
-	}
+	QString GetDefinitionText() const { return html.mid(startIndex+1,endIndex-startIndex-1);}
+	QString GetNestedText();
+	QString ToStr();
 
-	enum type{undefined, opener, closer};
-	QString TypeToStr()
-	{
-		QString ret = "error";
-		switch (type) {
-		case undefined: ret = "undefined"; break;
-		case opener: ret = "opener"; break;
-		case closer: ret = "closer"; break;
-		default: ret = "error";
-		}
-		return ret;
-	}
+	enum type { undefined, opener, closer, single };
+	QString TypeToStr();
 };
 
 struct HTML
 {
 	QString html;
-	std::vector<Teg> tegs;
-	void ParseTegs();
+	std::vector<std::unique_ptr<Tag>> tags;
 
-	QString TegsTextToStr()
-	{
-		QString ret;
-		for(auto &teg:tegs)
-		{
-			ret += teg.IndexesAndSrcTextToStr() + "\n";
-		}
-		return ret;
-	}
+	void ParseTags();
 
-	QString TegsDecodedToStr()
-	{
-		QString ret;
-		for(auto &teg:tegs)
-		{
-			ret += teg.DecodedToStr() + "\n";
-		}
-		return ret;
-	}
+	QString TegsToStr();
 
-	static std::vector<Block> Parse(const QString &html);
+	static std::vector<Block> ParseOld(const QString &html);
+
+	static QString& RemoveJungAndAddSpaces(QString &text, bool removeJung, bool addSpaces);
 };
 
 

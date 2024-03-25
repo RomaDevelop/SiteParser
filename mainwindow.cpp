@@ -21,15 +21,14 @@ MainWindow::MainWindow(QWidget *parent)
     manager = new QNetworkAccessManager(this);
 
 	connect(ui->pbParse,&QPushButton::clicked,[this](){
-		QFile file("D:/Documents/C++ QT/SiteParser/html example.html");
+		QFile file("F:\\C++\\SiteParser\\html example avito.html");
 		file.open(QFile::ReadOnly);
 		HTML html;
 		html.html = file.readAll();
-		html.ParseTegs();
+		html.ParseTags();
 
 		ui->plainTextEdit->clear();
-		ui->plainTextEdit->appendPlainText(html.TegsTextToStr());
-		ui->plainTextEdit->appendPlainText(html.TegsDecodedToStr());
+		ui->plainTextEdit->appendPlainText(html.TegsToStr());
 
 	});
 
