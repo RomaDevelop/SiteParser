@@ -28,31 +28,15 @@ MainWindow::MainWindow(QWidget *parent)
 		html.ParseTags();
 
 		ui->plainTextEdit->clear();
-		ui->plainTextEdit->appendPlainText(html.TegsToStr());
+		ui->plainTextEdit->appendPlainText(html.TagsToStr());
 
+		ui->plainTextEdit->appendPlainText("--------------------------");
+
+		auto tag = html.FindTag("span",{Attribute("class","style-item-address__string-wt61A")});
+		if(tag)
+			ui->plainTextEdit->appendPlainText(tag->ToStr());
+		else ui->plainTextEdit->appendPlainText("not find");
 	});
-
-//	QString adressGroup;
-//	auto valsList = HTML::GetValues(html,"style-item-address-KooqC");
-//	if(valsList.size() != 1) qdbg << "error 1";
-//	else adressGroup = valsList[0];
-
-//	QString adress;
-//	valsList = HTML::GetValues(adressGroup,"style-item-address__string-wt61A");
-//	if(valsList.size() != 1) qdbg << "error 2";
-//	else adress = valsList[0];
-//	qdbg << adress;
-//	qdbg << "--------------------------------";
-
-//	QStringList metroVals;
-//	metroVals = HTML::GetValues(adressGroup,"style-item-address-georeferences-item-TZsrp");
-//	if(metroVals.size() == 0) qdbg << "error 3";
-
-//	for(auto &metroVal:metroVals)
-//	{
-//		qdbg << metroVal;
-//		qdbg << "--------------------------------";
-//	}
 }
 
 MainWindow::~MainWindow()

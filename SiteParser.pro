@@ -14,7 +14,8 @@ SOURCES += \
 HEADERS += \
     ads.h \
     html.h \
-    mainwindow.h
+    mainwindow.h \
+    tagnames.h
 
 FORMS += \
     mainwindow.ui

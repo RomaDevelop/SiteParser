@@ -2,6 +2,9 @@
 
 using namespace std;
 
+#define QSn QString::number
+#define qdbg qDebug()
+
 void HTML::ParseTags()
 {
 	int size = html.size();
@@ -56,7 +59,7 @@ void HTML::ParseTags()
 	}
 }
 
-QString HTML::TegsToStr()
+QString HTML::TagsToStr()
 {
 	QString ret;
 	for(auto &tag:tags)
@@ -66,64 +69,41 @@ QString HTML::TegsToStr()
 	return ret;
 }
 
-std::vector<Block> HTML::ParseOld(const QString &html)
+Tag *HTML::FindTag(QString name, std::vector<Attribute> attributes)
 {
-	std::vector<Block> blocks;
-	int curIndex = 0;
-	int len = html.length();
-	bool blockStarted = false;
-	bool blockDefiningNow = false;
-	bool blockTextNow = false;
-	bool blockFinalNow = false;
-	bool quatsNow = false;
-	bool blockStarterOrFinisher = false;
-	while(curIndex < len)
+	Tag *retTag = nullptr;
+	bool findNotOne = false;
+	for(auto &tag:tags)
 	{
-		if(!blockStarted)
+		if(tag->name == name)
 		{
-			blockStarted = true;
-			blocks.push_back(Block());
+
+			bool check = true;
+			for(uint i=0; i<attributes.size(); i++)
+			{
+				bool find = false;
+				for(auto &attrib:tag->attributes)
+				{
+					auto attribValueOfTag = attrib.value;
+					if(attrib.value.left(1) == '\"' && attrib.value.right(1) == '\"')
+						attribValueOfTag = attrib.value.mid(1,attrib.value.length()-2);
+					if(attrib.name == attributes[i].name
+							&& attribValueOfTag == attributes[i].value)
+						find = true;
+				}
+				if(!find) check = false;
+			}
+			if(check)
+			{
+				if(!retTag) retTag = tag.get();
+				else findNotOne = true;
+			}
 		}
-		Block& curBlock = blocks[blocks.size()-1];
-
-		if(!quatsNow && html[curIndex] == '"') quatsNow = true;
-		if(quatsNow && html[curIndex] == '"') quatsNow = false;
-
-		blockStarterOrFinisher = false;
-		if(!quatsNow && !blockDefiningNow && !blockTextNow && html[curIndex] == '<')
-		{
-			blockDefiningNow = true;
-			blockStarterOrFinisher = true;
-		}
-
-		if(!quatsNow && blockTextNow && html[curIndex] == '<')
-		{
-			blockTextNow = false;
-			blockFinalNow = true;
-			blockStarterOrFinisher = true;
-		}
-
-		if(!quatsNow && blockDefiningNow && html[curIndex] == '>')
-		{
-			blockDefiningNow = false;
-			blockTextNow = true;
-			blockStarterOrFinisher = true;
-		}
-
-		if(!quatsNow && blockFinalNow && html[curIndex] == '>')
-		{
-			blockFinalNow = false;
-			blockStarted = false;
-			blockStarterOrFinisher = true;
-		}
-
-		if(blockDefiningNow && !blockStarterOrFinisher) curBlock.blockDefining += html[curIndex];
-		if(blockTextNow && !blockStarterOrFinisher) curBlock.blockText += html[curIndex];
-		if(blockFinalNow && !blockStarterOrFinisher) curBlock.blockFinal += html[curIndex];
-
-		curIndex++;
 	}
-	return blocks;
+
+	if(findNotOne) LogsSt::Warning("HTML::FindTag find tag find more than 1 tag");
+
+	return retTag;
 }
 
 QString& HTML::RemoveJungAndAddSpaces(QString &text, bool removeJung, bool addSpaces)
