@@ -10,7 +10,9 @@ void HTML::ParseTags()
 	int size = html.size();
 	bool quatsNow = false;
 	int tegStart = -1;
-	vector<Tag*> tagsOpeners;
+	vector<Tag*> tagsOpenersAndClosers;
+	Tag *prevOpenerTag = nullptr;
+	Tag *prevTag = nullptr;
 
 	for(int i=0; i<size; i++)
 	{
@@ -30,49 +32,69 @@ void HTML::ParseTags()
 
 			if(tegStart != -1 && html[i] == '>')
 			{
+				if(!tags.empty()) prevTag = tags.back().get();
+				if(!tags.empty() && tags.back()->type == Tag::opener) prevOpenerTag = tags.back().get();
+
 				tags.push_back(std::make_unique<Tag>(html, tegStart, i));
-				if(tags.back()->type == Tag::opener || tags.back()->type == Tag::closer) tagsOpeners.push_back(tags.back().get());
+				Tag *newTag = tags.back().get();
+
+				if(newTag->type == Tag::opener || newTag->type == Tag::closer)
+					tagsOpenersAndClosers.push_back(newTag);
+
+				if(prevTag)
+				{
+					newTag->prevTag = prevTag;
+					prevTag->nextTag = newTag;
+				}
+				if(prevOpenerTag && newTag->type == Tag::opener)
+				{
+					newTag->prevOpener = prevOpenerTag;
+					prevOpenerTag->nextOpener = newTag;
+				}
+
 				tegStart = -1;
 			}
 		}
 	}
 
-	for(uint i=0; i<tagsOpeners.size(); i++)
+	for(uint i=0; i<tagsOpenersAndClosers.size(); i++)
 	{
-		if(tagsOpeners[i]->type == Tag::opener)
+		if(tagsOpenersAndClosers[i]->type == Tag::opener)
 		{
-			for(uint j=i+1; j<tagsOpeners.size(); j++)
+			int countNested = 0;
+			for(uint j=i+1; j<tagsOpenersAndClosers.size(); j++)
 			{
-				if(tagsOpeners[j]->type == Tag::opener)
-					tagsOpeners[i]->nestedOpenersTags.push_back(tagsOpeners[j]);
-				if(tagsOpeners[j]->type == Tag::closer && tagsOpeners[i]->name == tagsOpeners[j]->name)
+				if(tagsOpenersAndClosers[j]->type == Tag::opener)
 				{
-					tagsOpeners[i]->closerTag = tagsOpeners[j];
-					tagsOpeners[j]->openerTag = tagsOpeners[i];
+					tagsOpenersAndClosers[i]->nestedOpenersTags.push_back(tagsOpenersAndClosers[j]);
+					countNested++;
+				}
+
+				if(tagsOpenersAndClosers[j]->type == Tag::closer)
+				{
+					if(countNested == 0)
+					{
+					tagsOpenersAndClosers[i]->closerTag = tagsOpenersAndClosers[j];
+					tagsOpenersAndClosers[j]->openerTag = tagsOpenersAndClosers[i];
 					break;
+					}
+					else
+					{
+						countNested--;
+					}
 				}
 			}
 
-			if(!tagsOpeners[i]->closerTag)
-				LogsSt::Error("HTML::ParseTags can't find closer for " + tagsOpeners[i]->ToStr());
+			countNested = 0;
+			if(!tagsOpenersAndClosers[i]->closerTag)
+				LogsSt::Error("HTML::ParseTags can't find closer for " + tagsOpenersAndClosers[i]->GetTagInfo());
 		}
 	}
 }
 
-QString HTML::TagsToStr()
+std::vector<Tag *> HTML::FindTags(QString name, std::vector<Attribute> attributes)
 {
-	QString ret;
-	for(auto &tag:tags)
-	{
-		ret += tag->ToStr() + "\n";
-	}
-	return ret;
-}
-
-Tag *HTML::FindTag(QString name, std::vector<Attribute> attributes)
-{
-	Tag *retTag = nullptr;
-	bool findNotOne = false;
+	std::vector<Tag*> retTags;
 	for(auto &tag:tags)
 	{
 		if(tag->name == name)
@@ -93,18 +115,24 @@ Tag *HTML::FindTag(QString name, std::vector<Attribute> attributes)
 				}
 				if(!find) check = false;
 			}
-			if(check)
-			{
-				if(!retTag) retTag = tag.get();
-				else findNotOne = true;
-			}
+			if(check) retTags.push_back(tag.get());
 		}
 	}
 
-	if(findNotOne) LogsSt::Warning("HTML::FindTag find tag find more than 1 tag");
-
-	return retTag;
+	return retTags;
 }
+
+QString HTML::TagsInfo()
+{
+	QString ret;
+	for(auto &tag:tags)
+	{
+		ret += tag->GetTagInfo() + "\n";
+	}
+	return ret;
+}
+
+
 
 QString& HTML::RemoveJungAndAddSpaces(QString &text, bool removeJung, bool addSpaces)
 {
@@ -140,7 +168,7 @@ QString& HTML::RemoveJungAndAddSpaces(QString &text, bool removeJung, bool addSp
 	return text;
 }
 
-void Tag::DecodeTag()
+void Tag::ParseTagDefinition()
 {
 	QString text = GetDefinitionText();
 
@@ -169,7 +197,7 @@ void Tag::DecodeTag()
 	words += word;
 
 	for(int i=0; i<words.size(); i++)
-		if(words[i].size() == 0) LogsSt::Error("Teg::ParseTeg: empty word["+QSn(i)+"] in Teg " + ToStr());
+		if(words[i].size() == 0) LogsSt::Error("Teg::ParseTeg: empty word["+QSn(i)+"] in Teg " + GetTagInfo());
 
 	if(words.size() % 3 == 1)
 	{
@@ -199,7 +227,7 @@ void Tag::DecodeTag()
 		}
 	}
 	else
-		LogsSt::Error("Teg::ParseTeg: wrong words.size() = " + QSn(words.size()) + " in Teg " + ToStr());
+		LogsSt::Error("Teg::ParseTeg: wrong words.size() = " + QSn(words.size()) + " in Teg " + GetTagInfo());
 }
 
 QString Tag::GetNestedText()
@@ -208,11 +236,11 @@ QString Tag::GetNestedText()
 	{
 		return html.mid(endIndex+1,closerTag->startIndex-endIndex-1);
 	}
-	else LogsSt::Error("Tag::GetNestedText Tag has no closer tag " + ToStr());
+	else LogsSt::Error("Tag::GetNestedText Tag has no closer tag " + GetTagInfo());
 	return "";
 }
 
-QString Tag::ToStr()
+QString Tag::GetTagInfo()
 {
 	QString ret;
 	ret = "["+TypeToStr()+"]["+name+"] (["+QSn(startIndex)+"-"+QSn(endIndex)+"])";

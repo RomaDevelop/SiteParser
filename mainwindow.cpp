@@ -28,14 +28,42 @@ MainWindow::MainWindow(QWidget *parent)
 		html.ParseTags();
 
 		ui->plainTextEdit->clear();
-		ui->plainTextEdit->appendPlainText(html.TagsToStr());
+		ui->plainTextEdit->appendPlainText(html.TagsInfo());
 
 		ui->plainTextEdit->appendPlainText("--------------------------");
 
-		auto tag = html.FindTag("span",{Attribute("class","style-item-address__string-wt61A")});
-		if(tag)
-			ui->plainTextEdit->appendPlainText(tag->ToStr());
-		else ui->plainTextEdit->appendPlainText("not find");
+		QString what = "adress";
+		QString tag = "span";
+		Attribute attrib("class","style-item-address__string-wt61A");
+		auto tags = html.FindTags(tag,{attrib});
+		if(tags.size())
+		{
+			ui->plainTextEdit->appendPlainText(tags[0]->GetNestedText());
+			if(tags.size() != 1) ui->plainTextEdit->appendPlainText("find more 1 tag");
+		}
+		else ui->plainTextEdit->appendPlainText("not find " + what + " " + tag + " " + attrib.ToStr());
+
+		ui->plainTextEdit->appendPlainText("--------------------------");
+
+		what = "metros";
+		tag = "span";
+		attrib = Attribute("class","style-item-address-georeferences-item-TZsrp");
+		tags = html.FindTags(tag,{attrib});
+		if(tags.size())
+		{
+			for(auto &tag:tags)
+			{
+				ui->plainTextEdit->appendPlainText(tag->GetTagInfo());
+				ui->plainTextEdit->appendPlainText("______");
+				for(auto &nestTag:tag->nestedOpenersTags)
+				{
+					ui->plainTextEdit->appendPlainText(nestTag->GetTagInfo());
+					ui->plainTextEdit->appendPlainText("------");
+				}
+				ui->plainTextEdit->appendPlainText("-------------");
+			}
+		}
+		else ui->plainTextEdit->appendPlainText("not find " + what + " " + tag + " " + attrib.ToStr());
 	});
 }
 

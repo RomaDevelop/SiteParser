@@ -34,18 +34,50 @@ struct Tag
 	Tag *closerTag = nullptr;
 	Tag *openerTag = nullptr;
 	std::vector<Tag*> nestedOpenersTags;
+	Tag *nextTag = nullptr;
+	Tag *prevTag = nullptr;
+	Tag *nextOpener = nullptr;
+	Tag *prevOpener = nullptr;
 
 	int type = undefined;
 	QString name;
 	std::vector<Attribute> attributes;
 
-	Tag(const QString &html_, int startIndex_, int endIndex_): html{html_}, startIndex{startIndex_}, endIndex {endIndex_} { DecodeTag(); }
-
-	void DecodeTag();
+	Tag(const QString &html_, int startIndex_, int endIndex_): html{html_}, startIndex{startIndex_}, endIndex {endIndex_} { ParseTagDefinition(); }
+	void ParseTagDefinition();
+//	Tag* FindCloser()
+//	{
+//		Tag* retPtr = nullptr;
+//		if(type != opener)
+//		{
+//			if(nestedOpenersTags.back() && nestedOpenersTags.back()->closerTag && nestedOpenersTags.back()->closerTag->nextTag)
+//			{
+//				Tag* tmpTagPt = nestedOpenersTags.back()->closerTag->nextTag;
+//				while(tmpTagPt->type == single)
+//				{
+//					if(tmpTagPt->nextTag)
+//						tmpTagPt = tmpTagPt->nextTag;
+//					else
+//					{
+//						LogsSt::Error("Tag::FindCloser error structrure 1");
+//						break;
+//					}
+//				}
+//				if(tmpTagPt->type == closer && tmpTagPt->name == name)
+//				{
+//					retPtr = tmpTagPt;
+//				}
+//				else LogsSt::Error("Tag::FindCloser error structrure 2");
+//			}
+//			else LogsSt::Error("Tag::FindCloser error structrure 3");
+//		}
+//		else LogsSt::Error("Tag::FindCloser tag is not opener " + GetTagInfo());
+//		return retPtr;
+//	}
 
 	QString GetDefinitionText() const { return html.mid(startIndex+1,endIndex-startIndex-1);}
 	QString GetNestedText();
-	QString ToStr();
+	QString GetTagInfo();
 
 	enum type { undefined, opener, closer, single };
 	QString TypeToStr();
@@ -57,9 +89,9 @@ struct HTML
 	std::vector<std::unique_ptr<Tag>> tags;
 
 	void ParseTags();
-	Tag* FindTag(QString name, std::vector<Attribute> attributes);
+	std::vector<Tag*> FindTags(QString name, std::vector<Attribute> attributes);
 
-	QString TagsToStr();
+	QString TagsInfo();
 
 	static QString& RemoveJungAndAddSpaces(QString &text, bool removeJung, bool addSpaces);
 };
